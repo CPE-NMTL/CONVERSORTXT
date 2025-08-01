@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Patrimônio e Estoque - Conversor de arquivos TXT</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #E57548;
+            color: #333;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            width: 800px;
+            margin: 20px;
+        }
+        .converter-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        select, input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            color: #333;
+        }
+        button {
+            background-color: #E57548;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin: 0 auto;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #d4683d;
+        }
+        #status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .success {
+            background-color: #155724;
+            color: #d4edda;
+        }
+        .error {
+            background-color: #721c24;
+            color: #f8d7da;
+        }
+        .conversion-type {
+            margin-bottom: 15px;
+        }
+        .conversion-type select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: white;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CPE - Conversor de arquivos</h1>
+        
+        <div class="conversion-type">
+            <label for="conversionType">Tipo de conversão:</label>
+            <select id="conversionType">
+                <option value="initial">Inicial - TXT para Excel</option>
+                <option value="return_txt_excel">Retorno - TXT para Excel</option>
+                <option value="return_excel_txt">Retorno - Excel para TXT</option>
+            </select>
+        </div>
+        
+        <div id="initialSection" class="converter-section">
+            <h2>Inicial - TXT para Excel</h2>
+            <div class="form-group">
+                <label for="initialTxtFile">Selecione o arquivo TXT:</label>
+                <input type="file" id="initialTxtFile" accept=".txt">
+            </div>
+            <button id="initialTxtToExcelBtn">Converter para Excel</button>
+            <div id="initialStatus" class="status"></div>
+        </div>
+        
+        <div id="returnTxtExcelSection" class="converter-section" style="display: none;">
+            <h2>Retorno - TXT para Excel</h2>
+            <div class="form-group">
+                <label for="returnTxtFile">Selecione o arquivo TXT:</label>
+                <input type="file" id="returnTxtFile" accept=".txt">
+            </div>
+            <button id="returnTxtToExcelBtn">Converter para Excel</button>
+            <div id="returnTxtStatus" class="status"></div>
+        </div>
+        
+        <div id="returnExcelTxtSection" class="converter-section" style="display: none;">
+            <h2>Retorno - Excel para TXT</h2>
+            <div class="form-group">
+                <label for="excelFile">Selecione o arquivo Excel:</label>
+                <input type="file" id="excelFile" accept=".xlsx, .xls">
+            </div>
+            <div class="form-group">
+                <label for="hasHeader">O arquivo possui cabeçalho?</label>
+                <select id="hasHeader">
+                    <option value="true">Sim</option>
+                    <option value="false">Não</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="unidade">Selecione a unidade:</label>
+                <select id="unidade">
+                    <option value="D001">D001</option>
+                    <option value="D002">D002</option>
+                    <option value="D003">D003</option>
+                    <option value="D005">D005</option>
+                    <option value="D007">D007</option>
+                    <option value="D008">D008</option>
+                    <option value="D009">D009</option>
+                    <option value="D010">D010</option>
+                    <option value="D011">D011</option>
+                    <option value="D012">D012</option>
+                    <option value="D013">D013</option>
+                    <option value="D014">D014</option>
+                    <option value="D015">D015</option>
+                    <option value="D016">D016</option>
+                    <option value="D017">D017</option>
+                </select>
+            </div>
+            <button id="excelToTxtBtn">Converter para TXT</button>
+            <div id="excelStatus" class="status"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Controle do tipo de conversão
+            const conversionType = document.getElementById('conversionType');
+            const initialSection = document.getElementById('initialSection');
+            const returnTxtExcelSection = document.getElementById('returnTxtExcelSection');
+            const returnExcelTxtSection = document.getElementById('returnExcelTxtSection');
+            
+            conversionType.addEventListener('change', function() {
+                initialSection.style.display = 'none';
+                returnTxtExcelSection.style.display = 'none';
+                returnExcelTxtSection.style.display = 'none';
+                
+                switch(this.value) {
+                    case 'initial':
+                        initialSection.style.display = 'block';
+                        break;
+                    case 'return_txt_excel':
+                        returnTxtExcelSection.style.display = 'block';
+                        break;
+                    case 'return_excel_txt':
+                        returnExcelTxtSection.style.display = 'block';
+                        break;
+                }
+            });
+            
+            // Inicializar mostrando a seção inicial
+            initialSection.style.display = 'block';
+            
+            // Inicial - TXT para Excel
+            document.getElementById('initialTxtToExcelBtn').addEventListener('click', convertInitialTxtToExcel);
+            
+            // Retorno - TXT para Excel
+            document.getElementById('returnTxtToExcelBtn').addEventListener('click', convertReturnTxtToExcel);
+            
+            // Retorno - Excel para TXT
+            document.getElementById('excelToTxtBtn').addEventListener('click', convertExcelToTxt);
+            
+            function convertInitialTxtToExcel() {
+                const fileInput = document.getElementById('initialTxtFile');
+                const statusDiv = document.getElementById('initialStatus');
+                
+                if (!fileInput.files.length) {
+                    statusDiv.textContent = "Por favor, selecione um arquivo TXT.";
+                    statusDiv.className = "status error";
+                    return;
+                }
+                
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const content = e.target.result;
+                        const lines = content.split('\n');
+                        const excelData = [];
+                        
+                        // Adiciona cabeçalho conforme especificado
+                        excelData.push(["Ean", "Material", "Descrição", "CMM", "Quantidade", "Lote", "Coluna7", "Coluna8"]);
+                        
+                        for (const line of lines) {
+                            if (line.trim() === '') continue;
+                            
+                            const row = line.split(';');
+                            
+                            // Processar cada coluna conforme especificado
+                            const processedRow = [
+                                removeLeadingZeros(row[0]), // Ean (coluna 1)
+                                removeLeadingZeros(row[1]), // Material (coluna 2)
+                                trimSpaces(row[2]), // Descrição (coluna 3)
+                                (parseInt(removeLeadingZeros(row[3])) / 100) || 0, // CMM (coluna 4)
+                                (parseInt(removeLeadingZeros(row[4])) / 1000) || 0, // Quantidade (coluna 5)
+                                trimSpaces(row[5]), // Lote (coluna 6)
+                                row[6] || '', // Coluna 7
+                                row[7] || ''  // Coluna 8
+                            ];
+                            
+                            excelData.push(processedRow);
+                        }
+                        
+                        // Criar planilha Excel
+                        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+                        const workbook = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(workbook, worksheet, "Dados");
+                        
+                        // Baixar o arquivo Excel
+                        XLSX.writeFile(workbook, "Inicio_estoque.xlsx");
+                        
+                        statusDiv.textContent = "Arquivo Excel gerado com sucesso!";
+                        statusDiv.className = "status success";
+                    } catch (error) {
+                        statusDiv.textContent = "Erro ao processar o arquivo: " + error.message;
+                        statusDiv.className = "status error";
+                        console.error(error);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    statusDiv.textContent = "Erro ao ler o arquivo.";
+                    statusDiv.className = "status error";
+                };
+                
+                reader.readAsText(file);
+            }
+            
+            function convertReturnTxtToExcel() {
+                const fileInput = document.getElementById('returnTxtFile');
+                const statusDiv = document.getElementById('returnTxtStatus');
+                
+                if (!fileInput.files.length) {
+                    statusDiv.textContent = "Por favor, selecione um arquivo TXT.";
+                    statusDiv.className = "status error";
+                    return;
+                }
+                
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const content = e.target.result;
+                        const lines = content.split('\n');
+                        const excelData = [];
+                        
+                        // Adiciona cabeçalho conforme especificado
+                        excelData.push(["Centro", "Data", "EAN", "Material", "Lote", "CMM", "Qtd"]);
+                        
+                        for (const line of lines) {
+                            if (line.trim() === '') continue;
+                            
+                            const row = line.split(';');
+                            
+                            // Processar cada coluna conforme especificado (transformações inversas)
+                            const processedRow = [
+                                row[0] || '', // Centro
+                                formatDate(row[1]), // Data
+                                removeLeadingZeros(row[2]), // EAN
+                                removeLeadingZeros(row[3]), // Material
+                                trimSpaces(row[4]), // Lote
+                                (parseInt(row[5]) / 100) || 0, // CMM
+                                (parseInt(row[6]) / 1000) || 0 // Qtd
+                            ];
+                            
+                            excelData.push(processedRow);
+                        }
+                        
+                        // Criar planilha Excel
+                        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+                        const workbook = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(workbook, worksheet, "Dados");
+                        
+                        // Baixar o arquivo Excel
+                        XLSX.writeFile(workbook, "Retorno_Estoque.xlsx");
+                        
+                        statusDiv.textContent = "Arquivo Excel gerado com sucesso!";
+                        statusDiv.className = "status success";
+                    } catch (error) {
+                        statusDiv.textContent = "Erro ao processar o arquivo: " + error.message;
+                        statusDiv.className = "status error";
+                        console.error(error);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    statusDiv.textContent = "Erro ao ler o arquivo.";
+                    statusDiv.className = "status error";
+                };
+                
+                reader.readAsText(file);
+            }
+            
+            function convertExcelToTxt() {
+                const fileInput = document.getElementById('excelFile');
+                const hasHeader = document.getElementById('hasHeader').value === 'true';
+                const unidade = document.getElementById('unidade').value;
+                const statusDiv = document.getElementById('excelStatus');
+                
+                if (!fileInput.files.length) {
+                    statusDiv.textContent = "Por favor, selecione um arquivo Excel.";
+                    statusDiv.className = "status error";
+                    return;
+                }
+                
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // Assume a primeira planilha é a que queremos
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        
+                        // Processar os dados conforme as especificações
+                        let txtContent = '';
+                        
+                        // Determina a linha de início baseado na presença de cabeçalho
+                        const startRow = hasHeader ? 1 : 0;
+                        
+                        for (let i = startRow; i < jsonData.length; i++) {
+                            const row = jsonData[i];
+                            if (row.length === 0) continue;
+                            
+                            // Processar cada coluna conforme especificado
+                            const processedRow = [
+                                row[0] || '', // Centro
+                                cleanDate(row[1]), // Data
+                                padZeros(row[2], 18), // EAN
+                                padZeros(row[3], 18), // Material
+                                padSpaces(row[4], 10), // Lote
+                                padZeros(Math.round((row[5] || 0) * 100), 13), // CMM
+                                padZeros(Math.round((row[6] || 0) * 1000), 13) // Qtd
+                            ];
+                            
+                            txtContent += processedRow.join(';') + '\n';
+                        }
+                        
+                        // Criar e baixar o arquivo TXT
+                        downloadFile(`RET${unidade}.txt`, txtContent);
+                        
+                        statusDiv.textContent = "Arquivo TXT gerado com sucesso!";
+                        statusDiv.className = "status success";
+                    } catch (error) {
+                        statusDiv.textContent = "Erro ao processar o arquivo: " + error.message;
+                        statusDiv.className = "status error";
+                        console.error(error);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    statusDiv.textContent = "Erro ao ler o arquivo.";
+                    statusDiv.className = "status error";
+                };
+                
+                reader.readAsArrayBuffer(file);
+            }
+            
+            // Funções auxiliares
+            function cleanDate(dateValue) {
+                if (!dateValue) return '';
+                return String(dateValue).replace(/[^0-9]/g, '');
+            }
+            
+            function padZeros(value, length) {
+                if (value === undefined || value === null) value = '';
+                return String(value).padStart(length, '0');
+            }
+            
+            function padSpaces(value, length) {
+                if (value === undefined || value === null) value = '';
+                return String(value).padEnd(length, ' ');
+            }
+            
+            function formatDate(dateStr) {
+                if (!dateStr || dateStr.length < 8) return '';
+                return `${dateStr.substring(0, 2)}/${dateStr.substring(2, 4)}/${dateStr.substring(4, 8)}`;
+            }
+            
+            function removeLeadingZeros(value) {
+                if (!value) return '';
+                return String(value).replace(/^0+/, '') || '0';
+            }
+            
+            function trimSpaces(value) {
+                if (!value) return '';
+                return String(value).trim();
+            }
+            
+            function downloadFile(filename, content) {
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        });
+    </script>
+</body>
+</html>
